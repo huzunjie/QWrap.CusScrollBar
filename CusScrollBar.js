@@ -1,8 +1,8 @@
 (function(window,document){
 
 
-	var getXY = QW.NodeH.getXY,
-		mix = QW.ObjectH.mix,
+    var getXY = QW.NodeH.getXY,
+        mix = QW.ObjectH.mix,
         EventTargetH = QW.EventTargetH,
         on = EventTargetH.on,
         un = EventTargetH.un,
@@ -14,7 +14,7 @@
         getPageXY = function(dir,e) { //根据dir ["x"||"y"]及event对象得到鼠标坐标
             return EventH["getPage"+(dir=="x"?"X":"Y")](e);
         },
-		CustEvent = QW.CustEvent,
+        CustEvent = QW.CustEvent,
         Selector = QW.Selector,
         queryEl = function(selector){ //选择器
             return selector && selector.nodeType?selector:Selector.query(null,selector)[0];
@@ -31,12 +31,12 @@
         };
 
 
-	function CusScrollBar(opts) {
-		this.options = mix({
+    function CusScrollBar(opts) {
+        this.options = mix({
             scrollDir:"y",           //滚动条方向          [必填项,x||y,默认y]
-			contSelector:"",         //内容容器元素选择器  [必填项]
-			scrollBarSelector:"",    //滚动条模拟元素选择器[非必填项,如果为空则自动取scrollSliderSelector的父容器]
-			scrollSliderSelector:"", //滚动条滑块          [必填项]
+            contSelector:"",         //内容容器元素选择器  [必填项]
+            scrollBarSelector:"",    //滚动条模拟元素选择器[非必填项,如果为空则自动取scrollSliderSelector的父容器]
+            scrollSliderSelector:"", //滚动条滑块          [必填项]
             addBtnSelector:"",       //滚动条坐标增加按钮(横向的向右,纵向的向下按钮)
             subBtnSelector:"",  //滚动条坐标减少按钮(横向的向左,纵向的向上按钮)
             btnClkStepSize:60,      //增加减少按钮按下时自动滚动的幅度
@@ -50,16 +50,16 @@
             wheelStepSize:80,       //滚轮控制滚动时,每次滚动触发的位移距离
             autoInitUiEvent:true,    //是否自动初始化UI事件绑定
             bindMousewheel:true      //是否绑定鼠标滚轮控制
-		}, opts||{},true);
-		CustEvent.createEvents(this);
-		this._init();
-	};
+        }, opts||{},true);
+        CustEvent.createEvents(this);
+        this._init();
+    };
 
     var _tl = {y:"Top",x:"Left"},_wh = {y:"Height",x:"Width"},_mum={x:0,y:1};
 
-	mix(CusScrollBar.prototype,{
+    mix(CusScrollBar.prototype,{
 
-		_init:function() {
+        _init:function() {
 
             var _t = this, opts = _t.options,
 
@@ -89,7 +89,7 @@
 
 
             opts.autoInitUiEvent && _t.initUIEvent();
-		},
+        },
 
         initUIEvent:function() {
             return this.resizeSlider().removeSlider().initMousewheel().initSliderEvent().initScrollBarEvent().initScrollEvent().initBtnEvent();
@@ -176,7 +176,7 @@
                 };
                 _t._sliderMousedownHandler = _t._sliderMousedownHandler || function(e){
                     _t._dragStaPagePos = getPageXY(_t._dir,e); //鼠标按下时页面中的所在坐标
-					_t._dragStaScrollBarRate = _t.getScrollSize()/_t.getScrollBarSize(); //鼠标按下时计算滚动条最大值与滚动条容器的比率(用于将鼠标位移距离转换为滚动条位移距离)
+                    _t._dragStaScrollBarRate = _t.getScrollSize()/_t.getScrollBarSize(); //鼠标按下时计算滚动条最大值与滚动条容器的比率(用于将鼠标位移距离转换为滚动条位移距离)
                     _t._dragStaScrollPos = _t.getScrollPosition(); //鼠标按下时滚动条所在的坐标点
                     stopPropagation(e);
                     preventDefault(e);
@@ -189,14 +189,14 @@
             }
             return _t;
         },
-		//更换绑定的内容容器
-		changeCont:function(contSelector){
-			var _t = this;
-			_t.options.contSelector = contSelector;
-			un(_t._contEl,"mousewheel",_t._mousewheelHandler);
-			_t._contEl = queryEl(contSelector);
-			_t.resizeSlider().removeSlider().initMousewheel();
-		},
+        //更换绑定的内容容器
+        changeCont:function(contSelector){
+            var _t = this;
+            _t.options.contSelector = contSelector;
+            un(_t._contEl,"mousewheel",_t._mousewheelHandler);
+            _t._contEl = queryEl(contSelector);
+            _t.resizeSlider().removeSlider().initMousewheel();
+        },
         initScrollBarEvent:function(){
             var _t = this;
             if(_t._scrollBarEl){
@@ -255,7 +255,7 @@
             })();
             return _t;
         },
-		//按照pageXY定位滚动条坐标 scrollPosDiff是滑块操作时候的初始差值
+        //按照pageXY定位滚动条坐标 scrollPosDiff是滑块操作时候的初始差值
         //如果不传scrollPosDiff则以当前pageXY作为滑块中心点,否则以scrollPosDiff与当前pageXY的差值作为滚动条新坐标
         scrollToByPagePos:function(e,scrollPosDiff){
             var _t = this, pageXY = getPageXY(_t._dir,e);
@@ -347,8 +347,8 @@
             }
             return _t;
         }
-	});
+    });
 
-	window.CusScrollBar = QW.CusScrollBar = CusScrollBar;
+    window.CusScrollBar = QW.CusScrollBar = CusScrollBar;
     
 })(window,document);
