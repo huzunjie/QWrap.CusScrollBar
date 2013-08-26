@@ -14,6 +14,10 @@
         getPageXY = function(dir,e) { //根据dir ["x"||"y"]及event对象得到鼠标坐标
             return EventH["getPage"+(dir=="x"?"X":"Y")](e);
         },
+		Dom = QW.Dom,
+		addClass = Dom.addClass,
+		removeClass = Dom.removeClass,
+		hasClass = Dom.hasClass,
         CustEvent = QW.CustEvent,
         Selector = QW.Selector,
         queryEl = function(selector){ //选择器
@@ -48,8 +52,7 @@
             scrollStepTime:10,       //scrollToX 或 scrollToY动画每帧时长
             scrollAnimAwait:false,   //滚动条动画是否等待上一帧完毕才执行交互响应
             wheelStepSize:80,       //滚轮控制滚动时,每次滚动触发的位移距离
-            autoInitUiEvent:true,    //是否自动初始化UI事件绑定
-            bindMousewheel:true      //是否绑定鼠标滚轮控制
+            autoInitUiEvent:true    //是否自动初始化UI事件绑定
         }, opts||{},true);
         CustEvent.createEvents(this);
         this._init();
@@ -59,6 +62,7 @@
 
     mix(CusScrollBar.prototype,{
 
+		//得到基本元素及方向参数
         _init:function() {
 
             var _t = this, opts = _t.options,
@@ -90,12 +94,23 @@
 
             opts.autoInitUiEvent && _t.initUIEvent();
         },
+		
+		//改变滚动条插件绑定到的容器为另一个contEl
+		changeContEl:function(contSelector){
+			var _t = this,autoInitEvt = _t.options.autoInitUiEvent;
+			autoInitEvt && _t.unbindMousewheel().unbindScrollEvent().unbindSliderHover4Cont();
+			_t._contEl = queryEl(contSelector);
+			autoInitEvt && _t.resizeSlider().removeSlider().bindMousewheel().bindScrollEvent().bindSliderHover4Cont();
+			return _t;
+		},
 
+		//初始化UI交互
         initUIEvent:function() {
-            return this.resizeSlider().removeSlider().initMousewheel().initSliderEvent().initScrollBarEvent().initScrollEvent().initBtnEvent();
+            return this.resizeSlider().removeSlider().bindMousewheel().bindSliderDragEvent().bindScrollBarEvent().bindScrollEvent().bindBtnEvent().bindSliderHover().bindSliderHover4Cont();
         },
 
-        initBtnEvent:function() {
+		//为滚动条两端按钮绑定交互功能
+        bindBtnEvent:function() {
             var _t = this;
             if(_t.addBtnEl){
                 _t._addBtnEvtAnim = _t._addBtnEvtAnim||function(){
@@ -130,41 +145,69 @@
             }
             return _t;
         },
-
-        /** 在内容容器上绑定滚轮控制滚动条
-        * @ bindEl 默认为this._contEl 可自由绑定到任意元素上 (比如document)
-        **/
-        initMousewheel:function(bindEl){
+		//解除滚动条两端按钮交互功能
+        unbindBtnEvent:function() {
             var _t = this;
-            if(_t.options.bindMousewheel){
-                _t._mousewheelHandler = _t._mousewheelHandler || function(e){
-                    preventDefault(e);
-                    var wheelDelta =  getDetail(e)
-                    _t.scrollToAnim(_t.getScrollPosition()+wheelDelta/Math.abs(wheelDelta)*_t.options.wheelStepSize);
-                };
-                on(bindEl || _t._contEl,"mousewheel",_t._mousewheelHandler);
+            if(_t.addBtnEl){
+                _t._addBtnMouseDownHandler && un(_t.addBtnEl,"mousedown",_t._addBtnMouseDownHandler);
+				_t._addBtnMouseUpHandler && _t._addBtnMouseUpHandler();
+            }
+            if(_t.subBtnEl){
+                _t._subBtnMouseDownHandler && un(_t.subBtnEl,"mousedown",_t._subBtnMouseDownHandler);
+				_t._subBtnMouseUpHandler && _t._subBtnMouseUpHandler();
             }
             return _t;
         },
 
-        //初始化滚动事件
-        initScrollEvent:function(bindEl) {
-            var _t = this;
-            _t._contScrollHandler = _t._contScrollHandler || function() {
-                _t.removeSlider();
-            };
-            on(bindEl || _t._contEl,"scroll",_t._contScrollHandler);
+        /** 在内容容器上绑定滚轮控制滚动条
+        * @ bindEl 默认为this._contEl 可自由绑定到任意元素上 (比如document)
+        **/
+        bindMousewheel:function(bindEl){
+            var _t = this,contEl = bindEl || _t._contEl;
+			if(contEl){
+				_t._mousewheelHandler = _t._mousewheelHandler || function(e){
+					preventDefault(e);
+					var wheelDelta =  getDetail(e)
+					_t.scrollToAnim(_t.getScrollPosition()+wheelDelta/Math.abs(wheelDelta)*_t.options.wheelStepSize);
+				};
+				on(contEl,"mousewheel",_t._mousewheelHandler);
+			}
+            return _t;
+        },
+		//解除内容容器滚轮跟随
+        unbindMousewheel:function(bindEl){
+            var _t = this,contEl = bindEl || _t._contEl;
+			contEl && _t._mousewheelHandler && un(contEl,"mousewheel",_t._mousewheelHandler);
             return _t;
         },
 
-        //初始化滑块元素DOM事件
-        initSliderEvent:function(){
-            var _t = this;
-            if(_t._sliderEl){
+        //初始化内容容器的滚动事件
+        bindScrollEvent:function(bindEl) {
+            var _t = this,contEl = bindEl || _t._contEl;
+			if(contEl){
+				_t._contScrollHandler = _t._contScrollHandler || function() {
+					_t.removeSlider();
+				};
+				on(bindEl || _t._contEl,"scroll",_t._contScrollHandler);
+			}
+            return _t;
+        },
+        //解除内容容器的滚动事件
+        unbindScrollEvent:function(bindEl) {
+            var _t = this,contEl = bindEl || _t._contEl;
+            contEl && _t._contScrollHandler && un(bindEl || _t._contEl,"scroll",_t._contScrollHandler);
+            return _t;
+        },
+
+        //初始化滑块拖动元素DOM事件
+        bindSliderDragEvent:function(){
+            var _t = this,sliderEl = _t._sliderEl;
+            if(sliderEl){
                 _t._docMuseupHandler = _t._docMuseUpHandler || function(e){ //除了鼠标释放，拉取下一屏之后也会触发该方法
                     _t._dragStaPagePos = null;
-                    preventDefault(e);
-                    _t._sliderEl.releaseCapture && _t._sliderEl.releaseCapture(); //for ie6 解除绑定滑块事件监听
+                    e && preventDefault(e);
+                    sliderEl.releaseCapture && sliderEl.releaseCapture(); //for ie6 解除绑定滑块事件监听
+					removeClass(sliderEl,"slider-active");
                     enableSelection(document); //重启拖选
                     un(document,"mouseup,contextmenu",_t._docMuseupHandler);
                     un(document,"mousemove",_t._docMusemoveHandler);
@@ -175,37 +218,104 @@
                     _t.scrollTo(_t._dragStaScrollPos+(getPageXY(_t._dir,e) - _t._dragStaPagePos)*_t._dragStaScrollBarRate);
                 };
                 _t._sliderMousedownHandler = _t._sliderMousedownHandler || function(e){
+                    stopPropagation(e);
+                    preventDefault(e);
                     _t._dragStaPagePos = getPageXY(_t._dir,e); //鼠标按下时页面中的所在坐标
                     _t._dragStaScrollBarRate = _t.getScrollSize()/_t.getScrollBarSize(); //鼠标按下时计算滚动条最大值与滚动条容器的比率(用于将鼠标位移距离转换为滚动条位移距离)
                     _t._dragStaScrollPos = _t.getScrollPosition(); //鼠标按下时滚动条所在的坐标点
-                    stopPropagation(e);
-                    preventDefault(e);
-                    _t._sliderEl.setCapture && _t._sliderEl.setCapture(); //for ie6 绑定事件监听到滑块
+                    sliderEl.setCapture && sliderEl.setCapture(); //for ie6 绑定事件监听到滑块
+					addClass(sliderEl,"slider-active");
                     disableSelection(document); //关闭拖选
                     on(document,"mouseup,contextmenu",_t._docMuseupHandler);
                     on(document,"mousemove",_t._docMusemoveHandler);
                 };
-                _t.onEvent("mousedown",_t._sliderMousedownHandler);
+                on(sliderEl,"mousedown",_t._sliderMousedownHandler);
             }
             return _t;
         },
-        //更换绑定的内容容器
-        changeCont:function(contSelector){
-            var _t = this;
-            _t.options.contSelector = contSelector;
-            un(_t._contEl,"mousewheel",_t._mousewheelHandler);
-            _t._contEl = queryEl(contSelector);
-            _t.resizeSlider().removeSlider().initMousewheel();
+        //解除滑块拖动元素DOM事件
+        unbindSliderDragEvent:function(){
+            var _t = this,sliderEl = _t._sliderEl;
+            if(sliderEl){
+                _t._sliderMousedownHandler && un(sliderEl,"mousedown",_t._sliderMousedownHandler);
+                _t._docMuseupHandler && _t._docMuseupHandler();
+            }
+            return _t;
         },
-        initScrollBarEvent:function(){
-            var _t = this;
-            if(_t._scrollBarEl){
-                _t._scrollBarMusedownHandler = _t._scrollBarMusedownHandler ||  function(e){
+		
+		//创建滑块hover处理事件
+		createSliderHoverHandler:function(){
+			var _t = this;
+			_t._sliderOnHoverHandler = _t._sliderOnHoverHandler||function(){
+				addClass(_t._sliderEl,"slider-hover");
+			};
+			_t._sliderUnHoverHandler = _t._sliderUnHoverHandler||function(){
+				removeClass(_t._sliderEl,"slider-hover");
+			};
+			return _t;
+		},
+		//初始化滑块hover事件
+		bindSliderHover:function(){
+			var _t = this,sliderEl = _t._sliderEl,scrollBarEl = _t._scrollBarEl;
+            if(sliderEl){
+				_t.createSliderHoverHandler();
+				on(sliderEl,"mouseenter",_t._sliderOnHoverHandler);
+				on(sliderEl,"mouseleave",_t._sliderOnHoverHandler);
+				on(scrollBarEl,"mouseenter",_t._sliderOnHoverHandler);
+				on(scrollBarEl,"mouseleave",_t._sliderUnHoverHandler);
+            }
+            return _t;
+		},
+		//解除滑块hover事件
+		unbindSliderHover:function(){
+			var _t = this,sliderEl = _t._sliderEl,scrollBarEl=_t.scrollBarEl;
+            if(contEl && sliderEl){
+				if(_t._sliderOnHoverHandler){
+					un(sliderEl,"mouseenter",_t._sliderOnHoverHandler);
+					un(scrollBarEl,"mouseenter",_t._sliderOnHoverHandler);
+				}
+				if(_t._sliderMouseLeaveHandler){
+					un(sliderEl,"mouseleave",_t._sliderMouseLeaveHandler);
+					un(scrollBarEl,"mouseleave",_t._sliderMouseLeaveHandler);
+				}
+            }
+            return _t;
+		},
+		//绑定滑块hover事件到内容容器
+		bindSliderHover4Cont:function(bindContEl){
+			var _t = this, contEl = bindContEl || _t._contEl;
+			if(contEl){
+				_t.createSliderHoverHandler();
+				on(contEl,"mouseenter",_t._sliderOnHoverHandler);
+				on(contEl,"mouseleave",_t._sliderUnHoverHandler);
+			}
+			return _t;
+		},
+		//解除绑定滑块hover事件到内容容器
+		unbindSliderHover4Cont:function(bindContEl){
+			var _t = this, contEl = bindContEl || _t._contEl;
+			if(contEl){
+				_t._sliderOnHoverHandler && un(contEl,"mouseenter",_t._sliderOnHoverHandler);
+				_t._sliderMouseLeaveHandler && un(contEl,"mouseleave",_t._sliderMouseLeaveHandler);
+			}
+			return _t;
+		},
+		
+		//绑定点击滚动条容器触发滚动并重新定位滑块相关事件
+        bindScrollBarEvent:function(){
+            var _t = this,scrollBarEl = _t._scrollBarEl;
+            if(scrollBarEl){
+                _t._scrollBarMDHandler = _t._scrollBarMDHandler ||  function(e){
                     _t.scrollToByPagePos(e);
                 };
-                //点击滚动条容器 重新定位滑块
-                on(_t._scrollBarEl,"mousedown",_t._scrollBarMusedownHandler);
+                on(scrollBarEl,"mousedown",_t._scrollBarMDHandler);
             }
+            return _t;
+        },
+		//解除点击滚动条容器触发滚动并重新定位滑块相关事件
+        unbindScrollBarEvent:function(){
+            var _t = this,scrollBarEl = _t._scrollBarEl;
+            scrollBarEl && _t._scrollBarMDHandler && un(scrollBarEl,"mousedown",_t._scrollBarMDHandler);
             return _t;
         },
 
@@ -259,7 +369,7 @@
         //如果不传scrollPosDiff则以当前pageXY作为滑块中心点,否则以scrollPosDiff与当前pageXY的差值作为滚动条新坐标
         scrollToByPagePos:function(e,scrollPosDiff){
             var _t = this, pageXY = getPageXY(_t._dir,e);
-            _t.scrollTo(_t.getScrollSize()*(pageXY-_t.getScrollBarPosition()-_t.getSliderSize()*.5)/_t.getScrollBarSize());
+            _t.scrollTo(_t.getScrollSize()*(pageXY-_t.getScrollBarPosition()-_t.getSliderSize()*.5)/(_t.getScrollBarSize()||1));
             return _t;
         },
         //按差值调整滚动条所在位置
@@ -308,7 +418,7 @@
         //滑块当前应在尺寸
         getSliderSize:function() {
             var _t = this;
-            return Math.max(_t.getScrollBarSize()*_t.getContSize()/_t.getScrollSize(),_t.options.sliderMinHeight);
+            return Math.max(_t.getScrollBarSize()*_t.getContSize()/(_t.getScrollSize()||1),_t.options.sliderMinHeight);
         },
 
         //滑块最大坐标
@@ -319,18 +429,18 @@
         //滑块当前应在坐标
         getSliderPosition:function() {
             var _t = this;
-            return _t.getMaxSliderPosition()*_t.getScrollPosition()/_t.getMaxScrollPosition();
+            return _t.getMaxSliderPosition()*_t.getScrollPosition()/(_t.getMaxScrollPosition()||1);
         },
 
         /** 设置滑块尺寸 **
         * @sizeVal  要调整到的长度尺寸 不传则默认为this.getSliderSize()
         **/
         resizeSlider:function(sizeVal) {
-            var _t = this;
-            if(_t._sliderEl){
+            var _t = this,sliderEl = _t._sliderEl;
+            if(sliderEl){
                 sizeVal = isNaN(sizeVal)?_t.getSliderSize():sizeVal;
-                _t._sliderEl.style.display=_t.options.sliderAlwaysShow || sizeVal<_t.getScrollBarSize()?"":"none";
-                _t._sliderEl.style[_t._whLCase] = sizeVal+'px';
+                sliderEl.style.display=_t.options.sliderAlwaysShow || sizeVal<_t.getScrollBarSize()?"":"none";
+                sliderEl.style[_t._whLCase] = sizeVal+'px';
                 _t.fire('resizeSlider');
             }
             return _t;
@@ -339,10 +449,10 @@
         * @sizeVal  要调整到的长度尺寸 不传则默认为this.getSliderPosition()
         **/
         removeSlider: function(positionVal){
-            var _t = this;
-            if(_t._sliderEl){
+            var _t = this,sliderEl = _t._sliderEl;
+            if(sliderEl){
                 positionVal = isNaN(positionVal)?_t.getSliderPosition():positionVal;
-                _t._sliderEl.style[_t._tlLCase] = positionVal+'px';
+                sliderEl.style[_t._tlLCase] = positionVal+'px';
                 _t.fire('removeSlider');
             }
             return _t;
@@ -350,5 +460,6 @@
     });
 
     window.CusScrollBar = QW.CusScrollBar = CusScrollBar;
+
     
 })(window,document);
