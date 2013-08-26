@@ -1,4 +1,3 @@
-/*  自定义滚动条功能模块 sta */
 (function(window,document){
     //document.ondragstart = function(){ return false };
     /*window.$ = function (id){
@@ -43,8 +42,8 @@
         this.options = mix({
             scrollDir:"y",           //滚动条方向          [必填项,x||y,默认y]
             contSelector:"",         //内容容器元素选择器  [必填项]
-            scrollBarSelector:"",    //滚动条模拟元素选择器[非必填项,如果为空则自动取scrollSliderSelector的父容器]
-            scrollSliderSelector:"", //滚动条滑块          [必填项]
+            scrollBarSelector:"",    //滚动条模拟元素选择器[非必填项,如果为空则自动取sliderSelector的父容器]
+            sliderSelector:"", //滚动条滑块          [必填项]
             addBtnSelector:"",       //滚动条坐标增加按钮(横向的向右,纵向的向下按钮)
             subBtnSelector:"",  //滚动条坐标减少按钮(横向的向左,纵向的向上按钮)
             btnClkStepSize:60,      //增加减少按钮按下时自动滚动的幅度
@@ -72,7 +71,7 @@
             var _t = this, opts = _t.options,
 
                 //滚动条滑块
-                _sliderEl = _t._sliderEl = opts.scrollSliderSelector && queryEl(opts.scrollSliderSelector),
+                _sliderEl = _t._sliderEl = opts.sliderSelector && queryEl(opts.sliderSelector),
 
                 //滚动条方向 x || y
                 _dir = _t._dir = opts.scrollDir.toLowerCase();
