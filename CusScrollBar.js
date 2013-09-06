@@ -9,7 +9,6 @@
         EventTargetH = QW.EventTargetH,
         on = EventTargetH.on,
         un = EventTargetH.un,
-        fire = EventTargetH.fire,
         EventH = QW.EventH,
         getDetail = EventH.getDetail,
         preventDefault = EventH.preventDefault,
@@ -24,7 +23,15 @@
         CustEvent = QW.CustEvent,
         Selector = QW.Selector,
         queryEl = function(selector){ //选择器
-            return selector && selector.nodeType?selector:Selector.query(null,selector)[0];
+            if(selector && typeof(selector)!="string"){
+                if("nodeType" in selector){
+                    return selector;
+                }
+                if("core" in selector && "length" in selector){
+                    return selector[0];
+                }
+            }
+            return Selector.query(null,selector)[0];
         },
         selectEventType = "onselectstart" in document.createElement("div")? "selectstart" : "mousedown",
         preventDefaultHandler = function(e) {
@@ -57,10 +64,12 @@
             wheelStepSize:80,       //滚轮控制滚动时,每次滚动触发的位移距离
             autoInitUiEvent:true    //是否自动初始化UI事件绑定
         }, opts||{},true);
-        CustEvent.createEvents(this);
+        CustEvent.createEvents(this,CusScrollBar.EVENTS);
         this._init();
     };
-
+    //自定义事件,依次对应: 滚动动画每一帧触发、滚动动画结束、滚动条变化、滑块尺寸变更、滑块坐标变更、内容容器改变
+    CusScrollBar.EVENTS = 'scrollToAnim scrollToAnimEnd scroll resizeSlider removeSlider contChange'.split(' ');
+    
     var _tl = {y:"Top",x:"Left"},_wh = {y:"Height",x:"Width"},_mum={x:0,y:1};
 
     mix(CusScrollBar.prototype,{
@@ -104,6 +113,7 @@
             autoInitEvt && _t.unbindMousewheel().unbindScrollEvent().unbindSliderHover4Cont();
             _t._contEl = queryEl(contSelector);
             autoInitEvt && _t.resizeSlider().removeSlider().bindMousewheel().bindScrollEvent().bindSliderHover4Cont();
+            _t.fire("contChange");
             return _t;
         },
 
@@ -321,6 +331,16 @@
             scrollBarEl && _t._scrollBarMDHandler && un(scrollBarEl,"mousedown",_t._scrollBarMDHandler);
             return _t;
         },
+        //绑定自定义事件（解决CustEvent的on不返回当前对象的问题）
+        onCustEvent:function(type,handler){
+            this.on(type,handler);
+            return this;
+        },
+        //解绑自定义事件（解决CustEvent的on不返回当前对象的问题）
+        unCustEvent:function(type,handler){
+            this.on(type,handler);
+            return this;
+        },
 
         //为用于模拟的元素绑定原生事件,elName为空则默认为滑块
         onEvent:function(type,handler,elName) {
@@ -385,7 +405,7 @@
         scrollTo:function(positionVal){
             var _t = this;
             _t._contEl[_t._stl] = positionVal;
-            _t.fire('scrollTo');
+            _t.fire('scroll');
             return _t;
         },
         //取得滚动条所在位置坐标值
@@ -444,7 +464,7 @@
                 sizeVal = isNaN(sizeVal)?_t.getSliderSize():sizeVal;
                 sliderEl.style.display=_t.options.sliderAlwaysShow || sizeVal<_t.getScrollBarSize()?"":"none";
                 sliderEl.style[_t._whLCase] = sizeVal+'px';
-                _t.fire('resizeSlider');
+                _t.fire('resizeSlider'); 
             }
             return _t;
         },
