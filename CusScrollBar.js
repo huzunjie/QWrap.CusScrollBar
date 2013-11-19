@@ -1,9 +1,4 @@
 (function(window,document){
-    //document.ondragstart = function(){ return false };
-    /*window.$ = function (id){
-        return document.getElementById(id);
-    };*/
-
     var getXY = QW.NodeH.getXY,
         mix = QW.ObjectH.mix,
         EventTargetH = QW.EventTargetH,
@@ -34,14 +29,11 @@
             return Selector.query(null,selector)[0];
         },
         selectEventType = "onselectstart" in document.createElement("div")? "selectstart" : "mousedown",
-        preventDefaultHandler = function(e) {
-            preventDefault(e);
-        },
         disableSelection = function(el){ //禁用选择功能
-            on(el,selectEventType,preventDefaultHandler);
+            on(el,selectEventType,preventDefault);
         },
         enableSelection = function(el){ //开放选择功能
-            un(el,selectEventType,preventDefaultHandler);
+            un(el,selectEventType,preventDefault);
         };
 
     
@@ -50,10 +42,10 @@
             scrollDir:"y",           //滚动条方向          [必填项,x||y,默认y]
             contSelector:"",         //内容容器元素选择器  [必填项]
             scrollBarSelector:"",    //滚动条模拟元素选择器[非必填项,如果为空则自动取sliderSelector的父容器]
-            sliderSelector:"", //滚动条滑块          [必填项]
+            sliderSelector:"",       //滚动条滑块          [必填项]
             addBtnSelector:"",       //滚动条坐标增加按钮(横向的向右,纵向的向下按钮)
-            subBtnSelector:"",  //滚动条坐标减少按钮(横向的向左,纵向的向上按钮)
-            btnClkStepSize:60,      //增加减少按钮按下时自动滚动的幅度
+            subBtnSelector:"",       //滚动条坐标减少按钮(横向的向左,纵向的向上按钮)
+            btnClkStepSize:60,       //增加减少按钮按下时自动滚动的幅度
             addStepSize:30,          //滚动条坐标增加按钮每点击一次增加的幅度
             subtractStepSize:30,     //滚动条坐标减少按钮每点击一次减少的幅度
             sliderMinHeight:10,      //滑块最小高度
@@ -61,14 +53,14 @@
             scrollAnimTime:80,       //单次scrollToX 或 scrollToY所使用的动画时长
             scrollStepTime:10,       //scrollToX 或 scrollToY动画每帧时长
             scrollAnimAwait:false,   //滚动条动画是否等待上一帧完毕才执行交互响应
-            wheelStepSize:80,       //滚轮控制滚动时,每次滚动触发的位移距离
-            autoInitUiEvent:true    //是否自动初始化UI事件绑定
+            wheelStepSize:80,        //滚轮控制滚动时,每次滚动触发的位移距离
+            autoInitUiEvent:true     //是否自动初始化UI事件绑定
         }, opts||{},true);
         CustEvent.createEvents(this,CusScrollBar.EVENTS);
         this._init();
     };
     //自定义事件,依次对应: 滚动动画每一帧触发、滚动动画结束、滚动条变化、滑块尺寸变更、滑块坐标变更、内容容器改变
-    CusScrollBar.EVENTS = 'scrollToAnim scrollToAnimEnd scroll resizeSlider removeSlider contChange'.split(' ');
+    CusScrollBar.EVENTS = 'scrollToAnim scrollToAnimEnd scroll resizeSlider sliderHide removeSlider contChange'.split(' ');
     
     var _tl = {y:"Top",x:"Left"},_wh = {y:"Height",x:"Width"},_mum={x:0,y:1};
 
@@ -446,13 +438,13 @@
 
         //滑块最大坐标
         getMaxSliderPosition:function() {
-            return this.getScrollBarSize()-this.getSliderSize();
+            return this.getScrollBarSize()-this._sliderEl[this._owh];
         },
 
         //滑块当前应在坐标
         getSliderPosition:function() {
-            var _t = this;
-            return _t.getMaxSliderPosition()*_t.getScrollPosition()/(_t.getMaxScrollPosition()||1);
+            var _t = this, maxSliderPos = _t.getMaxSliderPosition();
+            return Math.min(maxSliderPos*_t.getScrollPosition()/(_t.getMaxScrollPosition()||1),maxSliderPos);
         },
 
         /** 设置滑块尺寸 **
@@ -462,7 +454,11 @@
             var _t = this,sliderEl = _t._sliderEl;
             if(sliderEl){
                 sizeVal = isNaN(sizeVal)?_t.getSliderSize():sizeVal;
-                sliderEl.style.display=_t.options.sliderAlwaysShow || sizeVal<_t.getScrollBarSize()?"":"none";
+                var sliderDisplay = _t.options.sliderAlwaysShow || sizeVal<_t.getScrollBarSize()?"":"none";
+                sliderEl.style.display=sliderDisplay;
+                if(sliderDisplay=="none"){
+                    _t.fire('sliderHide'); 
+                }
                 sliderEl.style[_t._whLCase] = sizeVal+'px';
                 _t.fire('resizeSlider'); 
             }
@@ -485,4 +481,3 @@
     window.CusScrollBar = QW.CusScrollBar = CusScrollBar;
 
 })(window,document);
-/*  自定义滚动条功能模块 end */
